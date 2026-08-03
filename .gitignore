@@ -1,0 +1,46 @@
+# Python byte-compiled / cached files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+myenv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+
+# Database
+*.sqlite3
+*.sqlite3-journal
+db.sqlite3
+
+# Media & Static Files
+media/
+staticfiles/
+notes/*.pdf
+
+# IDE & Code Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs & Temporary Files
+*.log
+tmp/
