@@ -169,6 +169,8 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 class NotesSerializer(serializers.ModelSerializer):
     subject_name = serializers.CharField(source="subject.name", read_only=True)
+    file = serializers.SerializerMethodField()
+
     class Meta:
         model = Notes
         fields = [
@@ -182,10 +184,14 @@ class NotesSerializer(serializers.ModelSerializer):
             "downloads",
             "is_active",
         ]
-        read_only_fields = [
-            "upload_date",
-            "downloads",
-        ]
+
+    def get_file(self, obj):
+        request = self.context.get("request")
+        if obj.file:
+            if request:
+                return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
+        return None
 
 
 

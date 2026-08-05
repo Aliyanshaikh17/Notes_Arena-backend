@@ -10,10 +10,14 @@ from rest_framework.permissions import IsAuthenticated
 from .permissions import IsUser, IsAdmin
 from django.http import FileResponse, Http404
 from .utils import verify_admin_credentials
-
+from django.http import FileResponse, Http404
+import os
 import random
 from django.core.mail import send_mail
 from django.conf import settings
+
+
+
 
 from rest_framework.generics import (
     GenericAPIView,
@@ -312,6 +316,22 @@ class NotesDetailAPIView(GenericAPIView):
 
 
 
+# class DownloadNoteAPIView(GenericAPIView):
+#     permission_classes = [IsUser]
+
+#     def get(self, request):
+#         note_id = request.GET.get("note_id")
+#         if not note_id:
+#             return Response({"status": False,"message": "note_id is required."},status=status.HTTP_400_BAD_REQUEST)
+#         note = Notes.objects.filter(id=note_id).first()
+#         if not note or not note.file:
+#             return Response({"status": False,"message": "Note not found."},status=status.HTTP_404_NOT_FOUND)
+#         try:
+#             return FileResponse(note.file.open("rb"),as_attachment=True,filename=note.file.name.split("/")[-1])
+#         except FileNotFoundError:
+#             raise Http404("File not found.")
+
+
 class DownloadNoteAPIView(GenericAPIView):
     permission_classes = [IsUser]
 
@@ -319,14 +339,20 @@ class DownloadNoteAPIView(GenericAPIView):
         note_id = request.GET.get("note_id")
         if not note_id:
             return Response({"status": False,"message": "note_id is required."},status=status.HTTP_400_BAD_REQUEST)
-        note = Notes.objects.filter(id=note_id).first()
-        if not note or not note.file:
-            return Response({"status": False,"message": "Note not found."},status=status.HTTP_404_NOT_FOUND)
         try:
-            return FileResponse(note.file.open("rb"),as_attachment=True,filename=note.file.name.split("/")[-1])
-        except FileNotFoundError:
+            note = Notes.objects.get(id=note_id)
+        except Notes.DoesNotExist:
+            return Response({"status": False,"message": "Note not found."},status=status.HTTP_404_NOT_FOUND)
+        if not note.file:
             raise Http404("File not found.")
-
+        # Increase download count
+        note.downloads += 1
+        note.save(update_fields=["downloads"])
+        return FileResponse(
+            note.file.open("rb"),
+            as_attachment=True,
+            filename=os.path.basename(note.file.name),
+            content_type="application/pdf",)
 
 
 
@@ -498,10 +524,26 @@ class AdminSubjectDetailAPIView(RetrieveUpdateDestroyAPIView):
 
 
 
+# class AdminNotesListCreateAPIView(ListCreateAPIView):
+#     serializer_class = AdminNotesSerializer
+#     authentication_classes = []
+#     permission_classes = [IsAdmin]
+
+#     def get_queryset(self):
+#         qs = Notes.objects.all()
+#         subject_id = self.request.GET.get("subject_id")
+#         if subject_id:
+#             qs = qs.filter(subject_id=subject_id)
+#         return qs
+
+from rest_framework.parsers import MultiPartParser, FormParser
+
 class AdminNotesListCreateAPIView(ListCreateAPIView):
     serializer_class = AdminNotesSerializer
     authentication_classes = []
     permission_classes = [IsAdmin]
+
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
         qs = Notes.objects.all()
