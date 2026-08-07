@@ -82,9 +82,10 @@ class SendRegistrationOTPAPIView(GenericAPIView):
             otp=otp
         )
 
-        send_mail(
-            subject="Notes Arena Registration OTP",
-            message=f"""
+        try:
+            send_mail(
+                subject="Notes Arena Registration OTP",
+                message=f"""
 Hello {data['full_name']},
 
 Your Registration OTP is:
@@ -96,9 +97,20 @@ This OTP is valid for 5 minutes.
 Regards,
 Notes Arena Team
 """,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-        )
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+            )
+        except Exception as e:
+            # Clean up the OTP object since we couldn't send the email
+            RegistrationOTP.objects.filter(email=email).delete()
+            return Response(
+                {
+                    "status": False,
+                    "message": "Failed to send OTP email. Please check backend email configuration.",
+                    "error": str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         return Response(
             {
@@ -282,9 +294,10 @@ class ForgotPasswordAPIView(GenericAPIView):
             user=user,
             otp=otp
         )
-        send_mail(
-            subject="Notes Arena Password Reset OTP",
-            message=f"""
+        try:
+            send_mail(
+                subject="Notes Arena Password Reset OTP",
+                message=f"""
 Hello {user.full_name},
 
 Your OTP for password reset is:
@@ -298,9 +311,18 @@ Do not share this OTP with anyone.
 Regards,
 Notes Arena Team
 """,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-        )
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+            )
+        except Exception as e:
+            OTPVerification.objects.filter(user=user).delete()
+            return Response(
+                {
+                    "message": "Failed to send OTP email. Please check backend email configuration.",
+                    "error": str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         return Response(
             {

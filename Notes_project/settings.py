@@ -230,11 +230,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CSRF_TRUSTED_ORIGINS = [
     "https://notes-arena-backend.onrender.com",
     "https://notesarena-dev.netlify.app",
-    "https://na-dev.netlify.app",
 ]
 
 
 CORS_ALLOWED_ORIGINS = [
     "https://notesarena-dev.netlify.app",
-    "https://na-dev.netlify.app",
 ]

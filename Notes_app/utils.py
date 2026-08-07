@@ -22,13 +22,16 @@ Thank You,
 Notes Arena Team
 """
 
-    send_mail(
-        subject,
-        message,
-        settings.EMAIL_HOST_USER,
-        [email],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.EMAIL_HOST_USER,
+            [email],
+            fail_silently=False,
+        )
+    except Exception as e:
+        print(f"Failed to send OTP email to {email}: {e}")
 
 
 def send_registration_otp_email(email, full_name, otp):
@@ -51,13 +54,16 @@ Thank You,
 Notes Arena Team
 """
 
-    send_mail(
-        subject,
-        message,
-        settings.EMAIL_HOST_USER,
-        [email],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.EMAIL_HOST_USER,
+            [email],
+            fail_silently=False,
+        )
+    except Exception as e:
+        print(f"Failed to send Registration OTP email to {email}: {e}")
 
 def verify_admin_credentials(username, password):
     return (
