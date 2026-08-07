@@ -71,7 +71,8 @@ class SendRegistrationOTPAPIView(GenericAPIView):
         # Delete previous OTP if exists
         RegistrationOTP.objects.filter(email=email).delete()
 
-        otp = str(random.randint(100000, 999999))
+        # otp = str(random.randint(100000, 999999))
+        otp = generate_otp()
 
         RegistrationOTP.objects.create(
             full_name=data["full_name"],
@@ -83,34 +84,22 @@ class SendRegistrationOTPAPIView(GenericAPIView):
         )
 
         try:
-            send_mail(
-                subject="Notes Arena Registration OTP",
-                message=f"""
-Hello {data['full_name']},
-
-Your Registration OTP is:
-
-{otp}
-
-This OTP is valid for 5 minutes.
-
-Regards,
-Notes Arena Team
-""",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
+            send_registration_otp_email(
+                email=email,
+                full_name=data["full_name"],
+                otp=otp
             )
+
         except Exception as e:
-            # Clean up the OTP object since we couldn't send the email
             RegistrationOTP.objects.filter(email=email).delete()
             return Response(
                 {
                     "status": False,
-                    "message": "Failed to send OTP email. Please check backend email configuration.",
+                    "message": "Failed to send OTP.",
                     "error": str(e)
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+                )
 
         return Response(
             {
