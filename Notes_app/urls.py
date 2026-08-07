@@ -2,7 +2,10 @@ from django.urls import path
 from .views import *
 
 urlpatterns = [
-    path("register/", RegisterAPIView.as_view()),
+    # path("register/", RegisterAPIView.as_view()),
+    path("send-registration-otp/",SendRegistrationOTPAPIView.as_view(),name="send_registration_otp",),
+    path("verify-registration-otp/",VerifyRegistrationOTPAPIView.as_view(),name="verify_registration_otp",),
+    path("complete-registration/",CompleteRegistrationAPIView.as_view(),name="complete_registration",),
     path("login/", LoginAPIView.as_view()),
     path("forgot-password/", ForgotPasswordAPIView.as_view()),
     path("verify-otp/", VerifyOTPAPIView.as_view()),

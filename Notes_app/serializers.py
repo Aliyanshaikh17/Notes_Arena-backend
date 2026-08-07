@@ -13,39 +13,84 @@ from django.contrib.auth.password_validation import validate_password
 
 
 
-class RegisterSerializer(serializers.ModelSerializer):
+# class RegisterSerializer(serializers.ModelSerializer):
 
+#     confirm_password = serializers.CharField(write_only=True)
+#     class Meta:
+#         model = UserRegister
+#         fields = [
+
+#             "full_name",
+#             "username",
+#             "email",
+#             "password",
+#             "confirm_password",
+#             "phone_number"
+
+#         ]
+#         extra_kwargs = {
+#             "password": {"write_only": True}
+#         }
+
+#     def validate(self, attrs):
+#         if attrs["password"] != attrs["confirm_password"]:
+
+#             raise serializers.ValidationError("Passwords do not match.")
+#         return attrs
+#     def create(self, validated_data):
+#         validated_data.pop("confirm_password")
+#         validated_data["password"] = make_password(
+#             validated_data["password"]
+#         )
+#         return UserRegister.objects.create(**validated_data)
+
+
+
+
+
+class SendRegistrationOTPSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=150)
+    username = serializers.CharField(max_length=150)
+    phone_number = serializers.CharField(max_length=15)
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
-    class Meta:
-        model = UserRegister
-        fields = [
-
-            "full_name",
-            "username",
-            "email",
-            "password",
-            "confirm_password",
-            "phone_number"
-
-        ]
-        extra_kwargs = {
-            "password": {"write_only": True}
-        }
 
     def validate(self, attrs):
+
         if attrs["password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": "Passwords do not match."}
+            )
 
-            raise serializers.ValidationError("Passwords do not match.")
+        if UserRegister.objects.filter(email=attrs["email"]).exists():
+            raise serializers.ValidationError(
+                {"email": "Email already registered."}
+            )
+
+        if UserRegister.objects.filter(username=attrs["username"]).exists():
+            raise serializers.ValidationError(
+                {"username": "Username already exists."}
+            )
+
+        # attrs["password"] = make_password(attrs["password"])
+
         return attrs
-    def create(self, validated_data):
-        validated_data.pop("confirm_password")
-        validated_data["password"] = make_password(
-            validated_data["password"]
-        )
-        return UserRegister.objects.create(**validated_data)
 
 
 
+
+
+class VerifyRegistrationOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+
+
+
+
+
+class CompleteRegistrationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
 
 
 

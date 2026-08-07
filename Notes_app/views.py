@@ -9,13 +9,12 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsUser, IsAdmin
 from django.http import FileResponse, Http404
-from .utils import verify_admin_credentials
+from .utils import *
 from django.http import FileResponse, Http404
 import os
 import random
 from django.core.mail import send_mail
 from django.conf import settings
-
 
 
 
@@ -28,17 +27,225 @@ from rest_framework.generics import (
 
 
 
-class RegisterAPIView(GenericAPIView):
-    serializer_class = RegisterSerializer
+# class RegisterAPIView(GenericAPIView):
+#     serializer_class = RegisterSerializer
+
+#     def post(self, request):
+#         serializer = self.get_serializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response({"status": True,"message": "User Registered Successfully","data": serializer.data},status=status.HTTP_201_CREATED)
+#         return Response({"status": False,"errors": serializer.errors},status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class SendRegistrationOTPAPIView(GenericAPIView):
+    serializer_class = SendRegistrationOTPSerializer
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"status": True,"message": "User Registered Successfully","data": serializer.data},status=status.HTTP_201_CREATED)
-        return Response({"status": False,"errors": serializer.errors},status=status.HTTP_400_BAD_REQUEST)
+
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "status": False,
+                    "errors": serializer.errors
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        data = serializer.validated_data
+
+        email = data["email"]
+
+        # Check email already registered
+        if UserRegister.objects.filter(email=email).exists():
+            return Response(
+                {
+                    "status": False,
+                    "message": "Email already registered."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Delete previous OTP if exists
+        RegistrationOTP.objects.filter(email=email).delete()
+
+        otp = str(random.randint(100000, 999999))
+
+        RegistrationOTP.objects.create(
+            full_name=data["full_name"],
+            username=data["username"],
+            phone_number=data["phone_number"],
+            email=email,
+            password=data["password"],      # save hashed password in serializer
+            otp=otp
+        )
+
+        send_mail(
+            subject="Notes Arena Registration OTP",
+            message=f"""
+Hello {data['full_name']},
+
+Your Registration OTP is:
+
+{otp}
+
+This OTP is valid for 5 minutes.
+
+Regards,
+Notes Arena Team
+""",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+        )
+
+        return Response(
+            {
+                "status": True,
+                "message": "OTP sent successfully."
+            },
+            status=status.HTTP_200_OK
+        )
 
 
+
+class VerifyRegistrationOTPAPIView(GenericAPIView):
+    serializer_class = VerifyRegistrationOTPSerializer
+
+    def post(self, request):
+
+        serializer = self.get_serializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        email = serializer.validated_data["email"]
+        otp = serializer.validated_data["otp"]
+
+        try:
+            otp_obj = RegistrationOTP.objects.get(email=email)
+
+        except RegistrationOTP.DoesNotExist:
+
+            return Response(
+                {
+                    "status": False,
+                    "message": "OTP not found."
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if otp_obj.is_expired():
+            otp_obj.delete()
+
+            return Response(
+                {
+                    "status": False,
+                    "message": "OTP expired."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if otp_obj.otp != otp:
+
+            return Response(
+                {
+                    "status": False,
+                    "message": "Invalid OTP."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        otp_obj.is_verified = True
+        otp_obj.save()
+
+        return Response(
+            {
+                "status": True,
+                "message": "OTP verified successfully."
+            },
+            status=status.HTTP_200_OK
+        )
+
+
+class CompleteRegistrationAPIView(GenericAPIView):
+
+    serializer_class = CompleteRegistrationSerializer
+
+    def post(self, request):
+
+        serializer = self.get_serializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        email = serializer.validated_data["email"]
+
+        try:
+            otp_obj = RegistrationOTP.objects.get(email=email)
+
+        except RegistrationOTP.DoesNotExist:
+
+            return Response(
+                {
+                    "status": False,
+                    "message": "Registration request not found."
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if otp_obj.is_expired():
+
+            otp_obj.delete()
+
+            return Response(
+                {
+                    "status": False,
+                    "message": "OTP expired."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not otp_obj.is_verified:
+
+            return Response(
+                {
+                    "status": False,
+                    "message": "Please verify OTP first."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = UserRegister.objects.create_user(
+            full_name=otp_obj.full_name,
+            username=otp_obj.username,
+            phone_number=otp_obj.phone_number,
+            email=otp_obj.email,
+            password=otp_obj.password
+        )
+
+        otp_obj.delete()
+
+        return Response(
+            {
+                "status": True,
+                "message": "Registration completed successfully.",
+                "data": {
+                    "id": user.id,
+                    "full_name": user.full_name,
+                    "username": user.username,
+                    "email": user.email,
+                }
+            },
+            status=status.HTTP_201_CREATED
+        )
 
 
 class LoginAPIView(GenericAPIView):

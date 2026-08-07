@@ -31,7 +31,33 @@ Notes Arena Team
     )
 
 
+def send_registration_otp_email(email, full_name, otp):
+    subject = "Notes Arena - Registration OTP"
 
+    message = f"""
+Hello {full_name},
+
+Welcome to Notes Arena!
+
+Your Registration OTP is:
+
+{otp}
+
+This OTP is valid for 5 minutes.
+
+Do not share this OTP with anyone.
+
+Thank You,
+Notes Arena Team
+"""
+
+    send_mail(
+        subject,
+        message,
+        settings.EMAIL_HOST_USER,
+        [email],
+        fail_silently=False,
+    )
 
 def verify_admin_credentials(username, password):
     return (
